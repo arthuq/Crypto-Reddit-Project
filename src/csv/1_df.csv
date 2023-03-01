@@ -1,0 +1,5 @@
+date,name,name,score_comments_BitcoinMarkets,corpus_comments_BitcoinMarkets,score_titles_BitcoinMarkets,corpus_titles_BitcoinMarkets,name,count_comments_BitcoinMarkets,count_titles_BitcoinMarkets
+2023-02-02,crypto,score,0.5612569892473117,0.5029868578255674,0.5542444444444444,0.5,count,186,9
+2023-02-03,crypto,score,0.5722815286624204,0.5024769992922862,0.504825,0.5,count,157,8
+2023-02-04,crypto,score,0.5275939024390244,0.5023712737127372,0.5,0.5,count,82,4
+2023-02-05,crypto,score,0.5839131250000001,0.5041666666666667,0.44539,0.5,count,80,5
