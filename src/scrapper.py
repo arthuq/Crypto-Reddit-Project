@@ -1,156 +1,135 @@
-
-import requests
-from datetime import datetime
-import traceback
-import time
-import json
-import sys
-import os
-import pandas as pd
-from datetime import datetime, timedelta
-import matplotlib.pyplot as plt
-from cryptocmd import CmcScraper
-
-##
-
+## DESCRTIPTION
 
 """
 This scrapper will exctract data from reddit, using specified subreddit names and
 start/end dates from the search.
 It will compute several quantities (number of posts, comments, NLP analysis score...)
 and save everything into a csv file, in the "csv" folder.
-
 """
+## IMPORTATION OF CONFIG FILE
 
+# Selecting dir path for config file
+import os
+tmp_path = "D:/3.Cours EK/8. SEMESTRE DEUX/4. CRYPTO/PROJECT"
 
-## VARIABES
-'''
-#START_TIME, END_TIME = "15/11/2022", "15/01/2023"    # JOUR MOIS ANNEE
-START_TIME, END_TIME = "01/02/2023", "07/02/2023"    # JOUR MOIS ANNEE
-
-
-SUBREDDIT_LIST = ["wallstreetbets", "Bitcoin", "CryptocurrencyMemes", "BitcoinMarkets"]
-# ["CryptocurrencyMemes"]
-# ["wallstreetbets", "Cryptocurrency", "CryptoMarkets", "Bitcoin", "BitcoinBeginners", "CryptocurrencyMemes","CryptoTechnology","BitcoinMarkets"]
-
-
-CRYPTO_LIST = ["BTC", "ETH"]
-# ["BTC", "ETH", "LTC", "XRP"]
-'''
+# Execute config file
+exec(open(f'{tmp_path}/configs/config_local.py').read())
 
 ## VERSION OF DOWNLOAD
 
-def update_version(start_time:str, end_time:str, subreddit_list:list):
-    global version
-    with open(version_path, 'r') as f:
+def update_version(start_time:str, end_time:str, crypto_list:list, subreddit_list:list):
+    """Writes a new line in version file corresponding to the new downloaded csv"""
+    # Reading the version
+    with open(VERSION_PATH, 'r') as f:
         try :
             last_line = f.readlines()[-1]
+            up_version = str(int(last_line.split(",")[0]) + 1)
         except:
-            last_line = "0"
-        version = str(int(last_line.split(",")[0]) + 1)
-        new_line = version + "," + start_time.replace("-","/") + "," + end_time.replace("-", "/") + "," + "".join([s+'-' for s in subreddit_list])[:-1]
+            up_version = "1"
 
-    with open(version_path, 'a') as f:
+    times = start_time.replace("-","/") + "," + end_time.replace("-", "/")
+    cryptos = "-".join(crypto_list)
+    subreddits = "-".join(subreddit_list)
+    new_line = ",".join([up_version, times, cryptos, subreddits])
+
+    # Writing new version
+    with open(VERSION_PATH, 'a') as f:
         try:
             f.write(new_line + "\n")
         except:
+            print(new_line)
             raise Exception("Unable to write in _version.txt")
 
+    # Re-executing config files to have new global variables up to date.
+    try:
+        exec(open(f'{CONFIG_PATH}/config_local.py').read())
+    except:
+        print("Unable to execute config file after updated of version.txt.")
 
-'''
-version + "," + start_time.replace("-","/") + "," + end_time.replace("-", "/") + "," + "".join([s+'-' for s in subreddit_list])[:-1]
-'''
 
 def get_version():
-    global version
-    with open(version_path, 'r') as f:
+    """Checking last version in version file"""
+    with open(VERSION_PATH, 'r') as f:
         try :
             last_line = f.readlines()[-1]
+            return str(int(last_line.split(",")[0]) + 1)
         except:
-            last_line = "0"
-        version = str(int(last_line.split(",")[0]) + 1)
+            return "1"
 
 
 ## CREATING EMPTY DF
+""" old
 def create_date_index(start_time:str, end_time:str, type:str):
     start = datetime.strptime(start_time, "%d/%m/%Y")
     end = datetime.strptime(end_time, "%d/%m/%Y")
-    data = pd.DataFrame()
-    date_index = pd.date_range(start, end, freq='d').astype(str)
-    data["date"] = date_index
-    data.index = date_index
-    data.index.name = "date"
-    del data["date"]
-    data["_name"] = type
-    return data
+    indx = pd.date_range(start, end, freq='d').astype(str)
+    out = pd.DataFrame(indx)
+    out.index, out.index.name, out["_name"] = indx, "date", type
+    out.drop(columns=out.columns[0], axis=1,  inplace=True)
+    return out
+"""
+
+def create_date_index(start_time:str, end_time:str):
+    start = datetime.strptime(start_time, "%d/%m/%Y")
+    end = datetime.strptime(end_time, "%d/%m/%Y")
+    indx = pd.date_range(start, end, freq='d').astype(str)
+    return pd.DataFrame(index=indx)
+
 
 ## FUNCTIONS
 
-def get_score(txt_file_name:str, subreddit:str):
+def get_score(txt_file_name:str):
     from nltk.sentiment.vader import SentimentIntensityAnalyzer as SIA
     sia = SIA()
+    tmp = pd.read_csv(txt_file_name, sep=";", header=None, names=["date","content"], lineterminator='\n', quoting=3, error_bad_lines=False)
 
-    #getting file and corpus words
-    tmp = pd.read_csv(txt_file_name, sep=";", header=None, names=["date","content"], lineterminator='\n')
-    pos_file = open(pos_corpus_path, "r")
-    neg_file = open(neg_corpus_path, "r")
+    pos_file = open(POS_CORPUS_PATH, "r")
     pos_corpus = set(pos_file.read().split("\n"))
+    neg_file = open(NEG_CORPUS_PATH, "r")
     neg_corpus = set(neg_file.read().split("\n"))
 
-    def polarity(line):
+    def polarity_analysis(line):
         try :
             return sia.polarity_scores(line)["compound"]
         except:
-            return 0
+            return 0.0
 
-    def buysell(line):
+    def corpus_analysis(line):
         try :
             line = set( line.lower().split() )
-            pos_count = 0.5*len(line & pos_corpus)/len(pos_corpus)
-            neg_count = 0.5*len(line & neg_corpus)/len(pos_corpus)
-            return 0.5 + pos_count - neg_count
+            pos_count = len(line & pos_corpus)/len(pos_corpus)
+            neg_count = len(line & neg_corpus)/len(pos_corpus)
+            return pos_count-neg_count
         except:
-            return 0.5
+            return 0.0
 
-    if "comments" in txt_file_name:
-        title = "score_comments_"
-    elif "titles" in txt_file_name:
-        title = "score_titles_"
-    else:
-        title = "score_"
-    title += subreddit
+    title = txt_file_name.split("/")[-1].split(".")[0] + "_score"
+    corp = title.replace("titles", "corpus")
 
-    tmp[title] = tmp["content"].apply(polarity)
-    tmp[title] = (tmp[title]+1)/2
-    title = "corpus"+ title[5:]
-    tmp[title] = tmp["content"].apply(buysell)
+    tmp[title] = tmp["content"].apply(polarity_analysis)
+    tmp[corp] = tmp["content"].apply(corpus_analysis)
     del tmp["content"]
     tmp = tmp.groupby(['date']).mean()
-    # print(f"Got some errors in polarity computation for {txt_file_name}.")
-    return tmp
+    #tmp[title] = (tmp[title]+1)/2 # renormalisation entre 0 et 1, au lieu de -1,1
+
+    return tmp.round(decimals = 5)
 
 
 ## FUNCTION GET COUNT
-def get_count(txt_file_name:str, subreddit:str):
-    tmp = pd.read_csv(txt_file_name, sep=";", header=None,  names=["date","content"],lineterminator='\n')
+def get_count(txt_file_name:str):
+    tmp = pd.read_csv(txt_file_name, sep=";", header=None, names=["date","content"],lineterminator='\n', quoting=3, error_bad_lines=False)
     tmp = tmp.groupby(['date']).size().reset_index()
-
-    if "comments" in txt_file_name:
-        title = "count_comments_"
-    elif "titles" in txt_file_name:
-        title = "count_titles_"
-    else:
-        title = "count_"
-    title += subreddit
+    title = txt_file_name.split("/")[-1].split(".")[0] + "_count"
     tmp.columns = ["date", title]
     tmp.index = tmp["date"]
     del tmp["date"]
+    #tmp = tmp/tmp.sum() # Normalisation
+    # tmp = tmp.round(decimals = 5)
     return tmp
 
 ## FUNCTION DOWNLOADING DATA
 
 def downloadFromUrl(filename:str, object_type:str, subreddit:str):
-    # print(f"Saving {object_type}s to {filename}")
     count = 0
     if convert_to_ascii:
         handle = open(filename, 'w', encoding='ascii')
@@ -205,7 +184,7 @@ def downloadFromUrl(filename:str, object_type:str, subreddit:str):
             #---------------------------------------------------------------
         if break_out:
             break
-    print(f"Saved {count} {object_type}s from {subreddit}")
+    print(f" > Scrapped  {count} {object_type}s from {subreddit}")
     handle.close()
 
 
@@ -219,17 +198,13 @@ def download(start_time:str, end_time:str, subreddit_list:list, crypto_list:list
     start = datetime.strptime(start_time, "%d/%m/%Y")
     end = datetime.strptime(end_time, "%d/%m/%Y") + timedelta(days=1)
 
-    data_crypto = create_date_index(start_time, end_time, "crypto")
-    data_count = create_date_index(start_time, end_time, "count")
-    data_scores = create_date_index(start_time, end_time, "score")
+    data_crypto = create_date_index(start_time, end_time)
+    data_count = create_date_index(start_time, end_time)
+    data_scores = create_date_index(start_time, end_time)
 
-    #download cotnent for each subreddit
+    # SCRAPE FOR EACH SUBREDDIT =================================================
     for subreddit in subreddit_list :
-        username = ""
-        thread_id = ""
-        convert_to_ascii = False
-
-        filter_string = None
+        username, thread_id, convert_to_ascii, filter_string = "", "", False, None
         if username == "" and subreddit == "" and thread_id == "":
             print("Fill in username, subreddit or thread id")
             sys.exit(0)
@@ -242,94 +217,64 @@ def download(start_time:str, end_time:str, subreddit_list:list, crypto_list:list
         if thread_id:
             filters.append(f"link_id=t3_{thread_id}")
         filter_string = '&'.join(filters)
-
         url = "https://api.pushshift.io/reddit/{}/search?limit=1000&order=desc&{}&before="
-
-        #File name
-        fname = subreddit + "_" + start_time.replace("/","-") + "_" + end_time.replace("/","-")
 
         #Dowload function, temporary save comments and titles in .txt file
         if not thread_id:
-            # downloadFromUrl(f"{version}_{fname}_titles.txt", "submission")
-            downloadFromUrl(f"{csv_path}/titles.txt", "submission", subreddit)
-            print("download titles done")
+            downloadFromUrl(f"{TXT_PATH}/{subreddit}_titles.txt", "submission", subreddit)
+        downloadFromUrl(f"{TXT_PATH}/{subreddit}_comments.txt", "comment", subreddit)
 
-        # downloadFromUrl(f"{version}_{fname}_comments.txt", "comment")
-        downloadFromUrl(f"{csv_path}/comments.txt", "comment", subreddit)
-        print("download comments done")
-
+    # GETTING REDDIT COUNT AND SCORES ===========================================
+    for subreddit in subreddit_list :
         #Getting scores of comments and titles
-        data_scores = data_scores.join( get_score(f"{csv_path}/comments.txt",subreddit) )
-        data_scores = data_scores.join( get_score(f"{csv_path}/titles.txt",subreddit) )
-        print("score done")
+        data_scores = data_scores.join( get_score(f"{TXT_PATH}/{subreddit}_comments.txt") )
+        data_scores = data_scores.join( get_score(f"{TXT_PATH}/{subreddit}_titles.txt") )
+        print(f" > Extracted {subreddit} scores.")
 
         #Getting count of comments and titles
-        data_count = data_count.join(get_count(f"{csv_path}/comments.txt", subreddit))
-        data_count = data_count.join(get_count(f"{csv_path}/titles.txt", subreddit))
-        print("count done")
+        data_count = data_count.join(get_count(f"{TXT_PATH}/{subreddit}_comments.txt"))
+        data_count = data_count.join(get_count(f"{TXT_PATH}/{subreddit}_titles.txt"))
+        print(f" > Extracted {subreddit} counts.\n")
 
-        #removing txt files with comments and titles
-        os.remove(f'{csv_path}/comments.txt')
-        os.remove(f'{csv_path}/titles.txt')
-
-    # GETTING CRYPTOS DATA
+    # GETTING CRYPTOS DATA =====================================================
     start_time_tmp, end_time_tmp = start_time.replace("/","-"), end_time.replace("/","-")
     for crypto in crypto_list :
-        try :
-            scraper = CmcScraper(crypto, start_time_tmp, end_time_tmp)
-            tmp = scraper.get_dataframe()
-            tmp = tmp[['Date', 'Close']]
-            tmp.columns = ["date", f"{crypto}"]
-            tmp.index = tmp["date"]
-            del tmp["date"]
-            tmp = tmp.iloc[::-1]
-            data_crypto = data_crypto.join(tmp)
+        scraper = CmcScraper(crypto, start_time_tmp, end_time_tmp)
+        tmp = scraper.get_dataframe().iloc[::-1]
+        var = (tmp["High"]-tmp["Low"]) / abs((tmp["Close"] + tmp["Open"])/2)
+        var = np.round(var, 5)
+        indx = list(tmp["Date"])
+        del tmp
+        c_name = crypto + "_crypto"
+        data_crypto = data_crypto.join(pd.DataFrame(var.values, columns=[c_name], index = indx))
 
-        except:
-            print(f"Unable to scrape {crypto} data.")
-            continue
-            # raise Exception("Unable to scrape crypto data.")
-
-    #Changing indexes
+    # MERGING THE DATAFRAMES =====================================================
     data_scores.index.name = "date"
     data_count.index.name = "date"
     data_crypto.index.name = "date"
-
     try :
         df = pd.concat([data_crypto, data_scores, data_count], axis=1)
-        df.to_csv(f"{csv_path}/{version}_df.csv", index=True)
-        print(f"Saved file as {version}_df.csv")
+        df.to_csv(f"{CSV_PATH}/{NEXT_VERSION}_df.csv", index=True)
+        print(f"Saved file as {NEXT_VERSION}_df.csv")
+        for subreddit in subreddit_list :
+            os.remove(f'{TXT_PATH}/{subreddit}_comments.txt')
+            os.remove(f'{TXT_PATH}/{subreddit}_titles.txt')
+        print("Removed txt files successfully.")
     except:
         raise Exception("Unable to concatenate the 3 dataframes.")
 
-# **********************************************************************
+
 # **********************************************************************
 def main_api(start_time:str, end_time:str, subreddit_list:list, crypto_list:list) :
     import os
-    project_path = "D:/3.Cours EK/8. SEMESTRE DEUX/4. CRYPTO/PROJECT"
-    exec(open(f'{project_path}/configs/config_local.py').read())
-
-    #version update of the files
-    get_version()
-    print(f"{'*'*12} version : {version} {'*'*12}")
+    tmp_path = "D:/3.Cours EK/8. SEMESTRE DEUX/4. CRYPTO/PROJECT"
+    exec(open(f'{tmp_path}/configs/config_local.py').read())
 
     #lauching the download
+    print(f"Lauching reddit api scrapper ({start_time} to {end_time}).")
+    print("This will be version", NEXT_VERSION, "of the csv.\n")
     download(start_time, end_time, subreddit_list, crypto_list)
-    update_version(start_time, end_time, subreddit_list)
+    update_version(start_time, end_time, crypto_list, subreddit_list)
 
 # **********************************************************************
-# **********************************************************************
-
-## LAUCH MAIN
-
-# START_TIME, END_TIME = "02/02/2023", "05/02/2023"
-# CRYPTO_LIST = ["BTC"]
-# SUBREDDIT_LIST = ["BitcoinMarkets"]
-
-# main_api(START_TIME, END_TIME, SUBREDDIT_LIST, CRYPTO_LIST)
-
-
-##
-# ["BTC", "ETH", "LTC", "XRP"]
-# ["wallstreetbets", "Cryptocurrency", "CryptoMarkets", "Bitcoin", "BitcoinBeginners", "CryptocurrencyMemes","CryptoTechnology","BitcoinMarkets"]
 

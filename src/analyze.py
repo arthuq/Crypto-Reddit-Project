@@ -5,62 +5,51 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-#Importing files
-# os.chdir('D:/3.Cours EK/8. SEMESTRE DEUX/4. CRYPTO/PROJECT/API')
-# from API import *
 
-
-##SCRAPPING NEW FILES WITH API
-
-
-START_TIME, END_TIME = "01/02/2023", "07/02/2023"
-
-CRYPTO_LIST = ["BTC", "ETH", "LTC", "XRP"]
-# ["BTC", "ETH", "LTC", "XRP"]
-
-SUBREDDIT_LIST = ["Bitcoin"]
-# ["wallstreetbets", "Cryptocurrency", "CryptoMarkets", "Bitcoin", "BitcoinBeginners", "CryptocurrencyMemes","CryptoTechnology","BitcoinMarkets"]
-
-# main(START_TIME, END_TIME, SUBREDDIT_LIST, CRYPTO_LIST)
-
+"""
+Fichier python qui permet d'analyser un fichier CSV déjà enregistré en traçant les courbes et les corrélations avec le cours des cryptomonnaies. Le fichier créera un résumé visuel et l'enregistrera dans le dossier fig.
+"""
 
 ## GETTING LAST VERSION
-'''
-def get_version():
-    with open('D:/3.Cours EK/8. SEMESTRE DEUX/4. CRYPTO/PROJECT/API/DATA/0_version.txt', 'r') as f:
-        last_line = f.readlines()[-1]
-    return last_line.split(",")[0]
-'''
 
-def import_last_df_raw(input_version=-1):
-    df_name = csv_path
+def import_last_df_raw(input_version:int = -1):
+    global CSV_PATH
+    df_name = CSV_PATH
     if input_version == -1:
-        df_name += "/" + version + "_df.csv"
+        df_name += "/" + VERSION + "_df.csv"
     else:
         df_name += "/" + str(input_version) + "_df.csv"
+    print("csv version to be read : ", df_name.split("/")[-1])
     try:
         df = pd.read_csv(df_name)
+        df.index = df["date"]
+        del df["date"]
+        return df
     except:
         raise Exception(f"file '{df_name}' does not exist.")
-    df.index = df["date"]
-    del df["date"]
-    return df
+        return 0
 
 ## SEPARATING DATA
-
 def sep_df(df):
-    ind = [i  for i,c in enumerate(df.columns.values) if "_name" in c]
+    ind = [i  for i,c in enumerate(df.columns.values) if "name" in c]
     crypto = df.iloc[:,1:ind[1]]
     scores = df.iloc[:,ind[1]+1:ind[2]]
     counts = df.iloc[:,ind[2]+1:]
-    # del crypto["name"], scores["name.1"], counts["name.2"]
     return crypto, scores, counts
 
-def import_df(version):
+def import_df(version:int=-1):
     df = import_last_df_raw(version)
-    cp, sc, ct = sep_df(df)
-    all = sc.join(ct)
-    return {"crypto":cp, "score":sc, "count":ct, "all":all}
+    print(df)
+    try:
+        df = import_last_df_raw(version)
+        print(df)
+        cp, sc, ct = sep_df(df)
+        all = sc.join(ct)
+        return {"crypto":cp, "score":sc, "count":ct, "all":all}
+    except:
+        print("Unable to import df")
+        return 0
+
 
 ## PERCENT CHANGE
 
@@ -140,11 +129,13 @@ def save_summary(df, cor, key_times_up, key_times_down, version_input):
     except:
         print("Couldn't plot score data.")
 
+    """
     for ax in (ax1, ax2, ax3):
         for kt in key_times_up :
             ax.axvline(x = kt , linewidth = 2, color='green' )
         for kt in key_times_down :
             ax.axvline(x = kt , linewidth = 2, color='red' )
+    """
 
     try :
         cor.plot(kind="bar", ax=ax4)
@@ -156,29 +147,31 @@ def save_summary(df, cor, key_times_up, key_times_down, version_input):
 
     plt.gcf().autofmt_xdate()
     if version_input == -1:
-        version_input = version
+        version_input = VERSION
     ax4.text(-0.9, 3.3, f"Version : {version_input}", fontsize=16, verticalalignment='center', horizontalalignment = 'center')
     # plt.show()
-    plt.savefig(f'{fig_path}/{str(version_input)}_summary.png')
-    print(f"file '{str(version_input)}_summary.png' saved.")
+    plt.savefig(f'{FIG_PATH}/{str(version_input)}_summary.png')
+    print(f"file '{str(version_input)}_summary.png' saved in {FIG_PATH}.")
 
 ##
 
-def main_analyze(version=-1):
+def main_analyze(version:int=-1):
     import os
-    project_path = "D:/3.Cours EK/8. SEMESTRE DEUX/4. CRYPTO/PROJECT"
-    exec(open(f'{project_path}/configs/config_local.py').read())
+    tmp_path = "D:/3.Cours EK/8. SEMESTRE DEUX/4. CRYPTO/PROJECT"
+    exec(open(f'{tmp_path}/configs/config_local.py').read())
 
-    # os.chdir(src_path)
-    # from scrapper import *
-    # get_version()
+    print("Analysed version : ", VERSION)
 
-    df = import_df(version)
+    df = import_df(VERSION)
     df = pct_change(df)
+
     key_times_up, key_times_down = get_key_times(df["crypto"], 0.01, True)
     cor = get_correlation(df)
-    save_summary(df, cor, key_times_up, key_times_down, version)
+    save_summary(df, cor, key_times_up, key_times_down, VERSION)
 
-##
+"""
 # RUN:
-main_analyze()
+tmp = input("Run alalysis on csv ? (y/n)")
+if tmp == "y" :
+    main_analyze()
+"""
