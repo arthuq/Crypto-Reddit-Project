@@ -32,3 +32,6 @@
 32,01/10/2022,31/10/2022,BTC,CryptocurrencyMemes-wallstreetbets-Cryptocurrency
 33,01/11/2022,30/11/2022,BTC,CryptocurrencyMemes-wallstreetbets-Cryptocurrency
 34,01/12/2022,31/12/2022,BTC,CryptocurrencyMemes-wallstreetbets-Cryptocurrency
+35,01/01/2023,01/02/2023,BTC,CryptocurrencyMemes-wallstreetbets-Cryptocurrency
+36,01/02/2023,28/02/2023,BTC,CryptocurrencyMemes-wallstreetbets-Cryptocurrency
+37,01/03/2023,31/03/2023,BTC,CryptocurrencyMemes-wallstreetbets-Cryptocurrency

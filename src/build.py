@@ -119,7 +119,7 @@ def main_build(start_time:str, end_time:str, crypto_list:list, subreddit_list:li
 
 ## LAUCH MAIN FUNCTION
 
-START_TIME, END_TIME = "01/01/2022", "01/01/2023"
+START_TIME, END_TIME = "01/02/2023", "01/04/2023"
 CRYPTO_LIST = ["BTC"]
 SUBREDDIT_LIST = ["CryptocurrencyMemes", "wallstreetbets", "Cryptocurrency"]
 
