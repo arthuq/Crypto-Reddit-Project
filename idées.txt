@@ -1,0 +1,31 @@
+- faire un moèdle de saut avec les proba de saut issues des données internet et NLP.
+
+- faire un modèle L2 boosting pour prédire le saut ?
+
+- inclure le volume de trade, données telegram et twitter si possible
+
+- inclure article de presse ? bloomberg etc...
+
+- mettre le choix des subreddit et des dates dans le fichier config, comme ça un seul fichier à changer. Ou alors faire un fichier txt avec le nom des subreddit ?
+
+- faire du NLP sur des sorties internationnales de news finance. ex bloomberg, les news des chomage ameridain etc... aller chercher ce que les analystes disent dessus et faire du NLP.
+
+- ou alors modee de classification : avec 3 truc : neutre, down and up, et une proba pour chacun de ces catégories (comme le NLP).
+
+- plutot 3 jours avant 
+faire une ACP ou un truc pour voir le nombre de facteurs importnats (nb de jours), 
+signature plot ???
+
+- ajouter la liquidité, le volume de trade .... en plus dans les paramètres.
+
+- peut etre regarder la variaton totale de la crypto dans la journée.
+	somme des incréments en valeur absolu.
+
+- Utiliser un FNN et fonction logistique pour prédire une proba entre 0 et 1.
+faire rentrer les données de chaque jour (reddit info, NLP reddit, NLP médias traditionnels, prendte, truc de base....)
+
+- combiner avec un autre réseau LSTM qui étudie la série temporelle depuis quelques jours. recombiner comme pour le PRICE.
+
+Attnetion d'apprendre sur un set de données, puis d'évaluer sur un autre, dont les dates ne sont pas overlapped, sinon on apprend avec données futurs et biaise le rétultat.
+
+- rajouter le trucs de market comme imaalcen, Bid ask spread ... dans les données d'entrées.
