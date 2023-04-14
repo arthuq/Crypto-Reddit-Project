@@ -23,10 +23,20 @@ rng = default_rng()
 import torch
 import torch.nn as nn
 
+# random forest
+from sklearn.ensemble import RandomForestClassifier
+
+from sklearn.metrics import accuracy_score, confusion_matrix, precision_score, recall_score, ConfusionMatrixDisplay
+
+from sklearn.model_selection import RandomizedSearchCV
+from scipy.stats import randint
+
+from sklearn.linear_model import LogisticRegression
+
 ##
 
 
-global PROJECT_PATH, CONFIG_PATH, SRC_PATH, DAT_PATH, CSV_PATH, FIG_PATH, TXT_PATH, VERSION_PATH, NEG_CORPUS_PATH, POS_CORPUS_PATH, VERSION, NEXT_VERSION
+global PROJECT_PATH, CONFIG_PATH, SRC_PATH, DAT_PATH, CSV_PATH, FIG_PATH, TXT_PATH, RES_PATH, VERSION_PATH, NEG_CORPUS_PATH, POS_CORPUS_PATH, VERSION, NEXT_VERSION
 
 PROJECT_PATH = "D:/3.Cours EK/8. SEMESTRE DEUX/4. CRYPTO/PROJECT"
 
@@ -36,6 +46,7 @@ DAT_PATH = PROJECT_PATH + "/src/dat"
 CSV_PATH = SRC_PATH + "/csv"
 FIG_PATH = SRC_PATH + "/fig"
 TXT_PATH = SRC_PATH + "/txt_tmp"
+RES_PATH = SRC_PATH + "/res"
 
 VERSION_PATH = DAT_PATH + "/_version.txt"
 NEG_CORPUS_PATH = DAT_PATH + "/_neg_corpus.txt"
